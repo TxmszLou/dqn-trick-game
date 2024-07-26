@@ -44,6 +44,13 @@ class Card_Game:
         self.winners_tracker = torch.zeros(self.num_cards * self.num_players, self.num_players, dtype=int)
 
     '''
+    Description
+    Reset and start a new game
+    '''
+    def reset(self):
+        self.__init__(self.num_players, self.num_cards, self.trump)
+
+    '''
     Input
     index: the integer index of the card in the deck, defaultly from 0 to 51
 
@@ -134,10 +141,16 @@ class Card_Game:
     returns: a one-dimensional array to feed into the neural network, defaultly of length 3016
     '''
     def get_network_input(self):
-        flat_state = torch.concat((game.state, game.winners_tracker), dim=1).flatten()
+        flat_state = torch.concat((self.state, self.winners_tracker), dim=1).flatten()
         unseen_cards = torch.concat((self.hands[:self.current_player], self.hands[self.current_player+1:])).sum(0)
         return torch.concat((self.hands[self.current_player], flat_state, unseen_cards))
-
+    
+    '''
+    returns: True if the deck_index is a legal card to play for the current player
+    '''
+    def is_move_legal(self, deck_index):
+        legal_moves = self.get_legal_moves()
+        return deck_index in legal_moves
 
     '''
     returns: a list of indices, corresponding to cards in the deck which may be legally played at this time
@@ -153,3 +166,65 @@ class Card_Game:
         new_moves = torch.zeros((4, (self.num_players * self.num_cards / 4).int()))
         new_moves[self.current_suit] = by_suit[self.current_suit]
         return new_moves.flatten().nonzero().flatten()
+
+    '''
+    returns a random legal move from the current player
+    '''
+    def sample_legal_move(self):
+        moves = self.get_legal_moves()
+        i = torch.randint(len(moves), (1,))
+        chosen_move = moves[i]
+        return chosen_move
+
+
+# a random agent that choose a random legal move and plays it
+# returns the chosen card to play : 0-51
+def random_agent(game):
+    moves = game.get_legal_moves()
+    i = torch.randint(len(moves), (1,))
+    chosen_move = moves[i]
+    # game.play_card(chosen_move)
+    return chosen_move
+
+# a card playing environment that maintains a game environment and is responsible for
+# using some agent to get to the next state from the current state, and computes the reward
+class Card_Env:
+    def __init__(self, num_players=torch.tensor(4), num_cards=torch.tensor(13), trump=torch.tensor(3), foreign_policy=random_agent):
+        self.game = Card_Game(num_players, num_cards, trump)
+        # foreign_policy : game -> deck_index
+        self.foreign_policy = foreign_policy
+    
+    def reset(self):
+        self.game.reset()
+        return self.game.get_network_input()
+    
+    def get_state(self):
+        return self.game.get_network_input()
+
+    # return observation, reward, terminated
+    def step(self, deck_index):
+        # step to the next state using the given foreign policy to play three turns in the game
+        # TODO: if try to step through an illegal move, the game ends immediately
+        #       may want to modify in the future
+
+        current_player = self.game.current_player
+        current_tricks_won = self.game.tricks_won[current_player]
+
+        # first play the current move
+        if not self.game.is_move_legal(deck_index):
+            print('player plays an illegal move')
+            return None, 0, True
+        
+        self.game.play_card(deck_index)
+
+        # let the next three players play using the foreign_policy
+        for i in range(3):
+            move = self.foreign_policy(self.game)
+            if not self.game.is_move_legal(move):
+                return None, 0, True
+            self.game.play_card(move)
+
+        # reward is 1 if the player won this trick, 0 otherwise
+        reward = 1 if self.game.tricks_won[current_player] > current_tricks_won else 0
+        
+        return self.game.get_network_input(), reward, False
