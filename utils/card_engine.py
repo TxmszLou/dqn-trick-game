@@ -213,12 +213,13 @@ class Card_Env:
         # first play the current move
         if not self.game.is_move_legal(deck_index):
             print('player plays an illegal move')
-            return None, 0, True
+            return None, -10, True
         
         self.game.play_card(deck_index)
 
         # let the next three players play using the foreign_policy
-        for i in range(3):
+        # for i in range(3):
+        while self.game.current_player != current_player:
             move = self.foreign_policy(self.game)
             if not self.game.is_move_legal(move):
                 return None, 0, True
