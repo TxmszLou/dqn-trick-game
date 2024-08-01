@@ -181,6 +181,8 @@ class Card_Game:
 # returns the chosen card to play : 0-51
 def random_agent(game):
     moves = game.get_legal_moves()
+    if len(moves) == 0:
+        return
     i = torch.randint(len(moves), (1,))
     chosen_move = moves[i]
     # game.play_card(chosen_move)
@@ -221,6 +223,8 @@ class Card_Env:
         # for i in range(3):
         while self.game.current_player != current_player:
             move = self.foreign_policy(self.game)
+            if not move:
+                return None, 0, True    # TODO: Not sure about this, what to do if the game is over
             if not self.game.is_move_legal(move):
                 return None, 0, True
             self.game.play_card(move)
