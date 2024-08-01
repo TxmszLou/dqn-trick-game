@@ -209,7 +209,7 @@ class Card_Env:
         # TODO: if try to step through an illegal move, the game ends immediately
         #       may want to modify in the future
 
-        current_player = self.game.current_player
+        current_player = torch.clone(self.game.current_player)
         current_tricks_won = self.game.tricks_won[current_player]
 
         # first play the current move
@@ -218,10 +218,15 @@ class Card_Env:
             return None, -10, True
         
         self.game.play_card(deck_index)
+        # current_player = self.game.current_player
 
         # let the next three players play using the foreign_policy
         # for i in range(3):
-        while self.game.current_player != current_player:
+        while True:
+            print('player', self.game.current_player, 'is playing')
+            if self.game.current_player == current_player:
+                print("It is my turn again")
+                break
             move = self.foreign_policy(self.game)
             if not move:
                 return None, 0, True    # TODO: Not sure about this, what to do if the game is over
