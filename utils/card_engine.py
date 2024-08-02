@@ -156,15 +156,19 @@ class Card_Game:
     returns: a list of indices, corresponding to cards in the deck which may be legally played at this time
     '''
     def get_legal_moves(self):
-        moves = self.hands[self.current_player]
+        moves = self.hands[self.current_player].clone()
+        #print('moves are', moves)
         if self.current_suit == None:
+            #print('none is the suit. will return', moves.nonzero().flatten())
             return moves.nonzero().flatten()
 
         by_suit = torch.unflatten(moves, 0, (4, (self.num_players * self.num_cards / 4).int()))
         if by_suit[self.current_suit].sum()==0:
+            #print('no card in suit. will return', moves.nonzero().flatten())
             return moves.nonzero().flatten()
         new_moves = torch.zeros((4, (self.num_players * self.num_cards / 4).int()))
         new_moves[self.current_suit] = by_suit[self.current_suit]
+        #print('have cards in suit. will return', new_moves.flatten().nonzero().flatten())
         return new_moves.flatten().nonzero().flatten()
 
     '''
@@ -210,7 +214,7 @@ class Card_Env:
         #       may want to modify in the future
 
         current_player = torch.clone(self.game.current_player)
-        current_tricks_won = self.game.tricks_won[current_player]
+        current_tricks_won = torch.clone(self.game.tricks_won[current_player])
 
         # first play the current move
         if not self.game.is_move_legal(deck_index):
@@ -228,9 +232,17 @@ class Card_Env:
                 print("It is my turn again")
                 break
             move = self.foreign_policy(self.game)
-            if not move:
+            if move == None:
+                print('foreign policy did not find a legal move')
+                print('got', move)
+                torch.set_printoptions(profile="full")
+                print('the hand is', self.game.hands[self.game.current_player])
+                #print('the hand by suit is', torch.unflatten(self.game.hands[self.game.current_player], 0, (4, (self.game.num_players * self.game.num_cards / 4).int())))
+                #print('the current suit is', self.game.current_suit)
+                torch.set_printoptions(profile="default")
                 return None, 0, True    # TODO: Not sure about this, what to do if the game is over
             if not self.game.is_move_legal(move):
+                print('foreign policy found an illegal move')
                 return None, 0, True
             self.game.play_card(move)
 
