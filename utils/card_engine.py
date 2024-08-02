@@ -1,4 +1,16 @@
+import math
+import random
+from collections import namedtuple, deque
+
 import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+
+import matplotlib.pyplot as plt
+
+from itertools import count
+
 
 '''
 Attributes
@@ -98,7 +110,10 @@ class Card_Game:
     '''
     def get_suits(self, sum_of_cards):
         # suits = ['C', 'D', 'H', 'S']
-        by_suit = torch.unflatten(sum_of_cards, 0, (4, (self.num_players * self.num_cards / 4).int()))
+        num_cards_per_suit = int(self.num_players * self.num_cards / 4)
+
+        by_suit = torch.unflatten(sum_of_cards, 0, (4, num_cards_per_suit))
+
         return by_suit.count_nonzero(1)
 
 
@@ -160,10 +175,10 @@ class Card_Game:
         if self.current_suit == None:
             return moves.nonzero().flatten()
 
-        by_suit = torch.unflatten(moves, 0, (4, (self.num_players * self.num_cards / 4).int()))
+        by_suit = torch.unflatten(moves, 0, (4, int(self.num_players * self.num_cards / 4)))
         if by_suit[self.current_suit].sum()==0:
             return moves.nonzero().flatten()
-        new_moves = torch.zeros((4, (self.num_players * self.num_cards / 4).int()))
+        new_moves = torch.zeros((4, int(self.num_players * self.num_cards / 4)))
         new_moves[self.current_suit] = by_suit[self.current_suit]
         return new_moves.flatten().nonzero().flatten()
 
@@ -191,11 +206,15 @@ def random_agent(game):
 # a card playing environment that maintains a game environment and is responsible for
 # using some agent to get to the next state from the current state, and computes the reward
 class Card_Env:
-    def __init__(self, num_players=torch.tensor(4), num_cards=torch.tensor(13), trump=torch.tensor(3), foreign_policy=random_agent):
+    def __init__(self, num_players=4, num_cards=13, trump=3, device=None):
+        self.device = device if device is not None else torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.game = Card_Game(num_players, num_cards, trump)
-        # foreign_policy : game -> deck_index
-        self.foreign_policy = foreign_policy
-    
+        n_input = (1 * 52) + (56 * 52) + (1 * 52)
+        n_actions = 52
+        self.device = device
+        self.policy_net = DQN(n_input, n_actions).to(self.device)
+        self.policy_net.load_state_dict(torch.load('trained policy for other players.pth', map_location=self.device))
+
     def reset(self):
         self.game.reset()
         return self.game.get_network_input()
@@ -220,14 +239,16 @@ class Card_Env:
         self.game.play_card(deck_index)
         # current_player = self.game.current_player
 
-        # let the next three players play using the foreign_policy
         # for i in range(3):
         while True:
             print('player', self.game.current_player, 'is playing')
             if self.game.current_player == current_player:
                 print("It is my turn again")
                 break
-            move = self.foreign_policy(self.game)
+
+            state = self.game.get_network_input()
+            move = self.select_move_with_policy(state)
+
             if not move:
                 return None, 0, True    # TODO: Not sure about this, what to do if the game is over
             if not self.game.is_move_legal(move):
@@ -238,3 +259,46 @@ class Card_Env:
         reward = 1 if self.game.tricks_won[current_player] > current_tricks_won else 0
         
         return self.game.get_network_input(), reward, False
+    
+    
+
+    def select_move_with_policy(self, state):
+        if not isinstance(state, torch.Tensor):
+            state = torch.tensor(state, dtype=torch.float32)
+        state = state.to(self.device)
+
+        print(f"State device: {state.device}")
+        for name, param in self.policy_net.named_parameters():
+            print(f"Model parameter '{name}' is on device: {param.device}")
+
+        with torch.no_grad():
+            q_values = self.policy_net(state)
+        move = torch.argmax(q_values).item()
+
+        return move
+
+class DQN(nn.Module):
+
+    # n_input: the current state
+    #  (1x52)    +  (56x52)       +       (1x52): the current state
+    #    ^hand       ^who plays each card  ^cards not seen yet
+    #                       + cards played
+    # n_output: probability of playing each card
+    #   (1x52)
+    def __init__(self, n_input, n_output):
+        super(DQN, self).__init__()
+        self.layer1 = nn.Linear(n_input, 128)
+        self.layer2 = nn.Linear(128, 128)
+        self.layer3 = nn.Linear(128, n_output)
+
+    def forward(self, x):
+        if x.dtype == torch.float32:
+            x = F.relu(self.layer1(x))
+            x = F.relu(self.layer2(x))
+        else:
+            x=x.to(torch.float32)
+            x = F.relu(self.layer1(x))
+            x = F.relu(self.layer2(x))
+        return self.layer3(x)
+
+
