@@ -1,5 +1,12 @@
 import torch
 
+# if GPU is to be used
+device = torch.device(
+    "cuda" if torch.cuda.is_available() else
+    "mps" if torch.backends.mps.is_available() else
+    "cpu"
+)
+
 '''
 Attributes
 self.num_players: integer number of players
@@ -156,7 +163,7 @@ class Card_Game:
     returns: a list of indices, corresponding to cards in the deck which may be legally played at this time
     '''
     def get_legal_moves(self):
-        moves = self.hands[self.current_player].clone()
+        moves = self.hands[self.current_player]
         #print('moves are', moves)
         if self.current_suit == None:
             #print('none is the suit. will return', moves.nonzero().flatten())
@@ -183,7 +190,8 @@ class Card_Game:
 
 # a random agent that choose a random legal move and plays it
 # returns the chosen card to play : 0-51
-def random_agent(game):
+# the argument fp is not used, but is necessary to interchange random_agent and policy_agent in Card_Env
+def random_agent(game, fp):
     moves = game.get_legal_moves()
     if len(moves) == 0:
         return
@@ -191,6 +199,30 @@ def random_agent(game):
     chosen_move = moves[i]
     # game.play_card(chosen_move)
     return chosen_move
+
+
+def policy_agent(game,fp):
+    with torch.no_grad():
+        q_values = fp(game.get_network_input().to(torch.float32).to(device))
+    move = q_values.max(0).indices
+    return move
+
+
+
+def select_move_with_policy(self, state):
+    if not isinstance(state, torch.Tensor):
+        state = torch.tensor(state, dtype=torch.float32)
+    state = state.to(self.device)
+
+    print(f"State device: {state.device}")
+    for name, param in self.policy_net.named_parameters():
+        print(f"Model parameter '{name}' is on device: {param.device}")
+
+    with torch.no_grad():
+        q_values = self.policy_net(state)
+    move = torch.argmax(q_values).item()
+
+    return move
 
 # a card playing environment that maintains a game environment and is responsible for
 # using some agent to get to the next state from the current state, and computes the reward
@@ -208,7 +240,7 @@ class Card_Env:
         return self.game.get_network_input()
 
     # return observation, reward, terminated
-    def step(self, deck_index, verbose = True):
+    def step(self, deck_index, fp):
         # step to the next state using the given foreign policy to play three turns in the game
         # TODO: if try to step through an illegal move, the game ends immediately
         #       may want to modify in the future
@@ -218,8 +250,7 @@ class Card_Env:
 
         # first play the current move
         if not self.game.is_move_legal(deck_index):
-            if verbose == True:
-                print('player plays an illegal move')
+            #print('player plays an illegal move')
             return None, -10, True
         
         self.game.play_card(deck_index)
@@ -228,27 +259,22 @@ class Card_Env:
         # let the next three players play using the foreign_policy
         # for i in range(3):
         while True:
-            if verbose == True:
-                print('player', self.game.current_player, 'is playing')
+            print('player', self.game.current_player, 'is playing')
             if self.game.current_player == current_player:
-                if verbose == True:
-                    print("It is my turn again")
+                #print("It is my turn again")
                 break
-            move = self.foreign_policy(self.game)
+            move = self.foreign_policy(self.game, fp)
             if move == None:
-                if verbose == True:
-                    print('foreign policy did not find a legal move')
-                    print('got', move)
+                print('foreign policy did not find a legal move')
+                print('got', move)
                 torch.set_printoptions(profile="full")
-                if verbose == True:
-                    print('the hand is', self.game.hands[self.game.current_player])
+                print('the hand is', self.game.hands[self.game.current_player])
                 #print('the hand by suit is', torch.unflatten(self.game.hands[self.game.current_player], 0, (4, (self.game.num_players * self.game.num_cards / 4).int())))
                 #print('the current suit is', self.game.current_suit)
                 torch.set_printoptions(profile="default")
                 return None, 0, True    # TODO: Not sure about this, what to do if the game is over
             if not self.game.is_move_legal(move):
-                if verbose == True:
-                    print('foreign policy found an illegal move')
+                print('foreign policy found an illegal move')
                 return None, 0, True
             self.game.play_card(move)
 
