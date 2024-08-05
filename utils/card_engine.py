@@ -214,9 +214,9 @@ def select_move_with_policy(self, state):
         state = torch.tensor(state, dtype=torch.float32)
     state = state.to(self.device)
 
-    print(f"State device: {state.device}")
-    for name, param in self.policy_net.named_parameters():
-        print(f"Model parameter '{name}' is on device: {param.device}")
+    # print(f"State device: {state.device}")
+    # for name, param in self.policy_net.named_parameters():
+        # print(f"Model parameter '{name}' is on device: {param.device}")
 
     with torch.no_grad():
         q_values = self.policy_net(state)
@@ -259,22 +259,22 @@ class Card_Env:
         # let the next three players play using the foreign_policy
         # for i in range(3):
         while True:
-            print('player', self.game.current_player, 'is playing')
+            # print('player', self.game.current_player, 'is playing')
             if self.game.current_player == current_player:
                 #print("It is my turn again")
                 break
             move = self.foreign_policy(self.game, fp)
             if move == None:
-                print('foreign policy did not find a legal move')
-                print('got', move)
+                # print('foreign policy did not find a legal move')
+                # print('got', move)
                 torch.set_printoptions(profile="full")
-                print('the hand is', self.game.hands[self.game.current_player])
+                # print('the hand is', self.game.hands[self.game.current_player])
                 #print('the hand by suit is', torch.unflatten(self.game.hands[self.game.current_player], 0, (4, (self.game.num_players * self.game.num_cards / 4).int())))
                 #print('the current suit is', self.game.current_suit)
                 torch.set_printoptions(profile="default")
                 return None, 0, True    # TODO: Not sure about this, what to do if the game is over
             if not self.game.is_move_legal(move):
-                print('foreign policy found an illegal move')
+                # print('foreign policy found an illegal move')
                 return None, 0, True
             self.game.play_card(move)
 
