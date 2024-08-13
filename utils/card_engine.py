@@ -284,4 +284,4 @@ class Card_Env:
         # reward = 1 if self.game.tricks_won[current_player] > current_tricks_won else 0
         reward = 1
         
-        return self.game.get_network_input(), reward, len(self.game.get_legal_moves()) == 0
+        return self.game.get_network_input(), reward, len(self.game.hands[current_player].nonzero()) == 0
