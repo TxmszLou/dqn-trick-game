@@ -252,7 +252,7 @@ class Card_Env:
         if not self.game.is_move_legal(deck_index):
             #print('player plays an illegal move')
             # return None, -10, True
-            return None, -1, True
+            return None, (self.game.turn_counter // 4) - 13, True
 
         
         self.game.play_card(deck_index)
@@ -281,7 +281,7 @@ class Card_Env:
             self.game.play_card(move)
 
         # reward is 1 if the player won this trick, 0 otherwise
-        # reward = 1 if self.game.tricks_won[current_player] > current_tricks_won else 0
-        reward = 1
+        reward = 1 if self.game.tricks_won[current_player] > current_tricks_won else 0
+        # reward = 1
         
         return self.game.get_network_input(), reward, len(self.game.hands[current_player].nonzero()) == 0
