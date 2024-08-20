@@ -201,12 +201,13 @@ def random_agent(game, fp):
     return chosen_move
 
 
-def policy_agent(game,fp):
-    with torch.no_grad():
-        q_values = fp(game.get_network_input().to(torch.float32).to(device))
-    move = q_values.max(0).indices
-    return move
-
+# def policy_agent(game, fp):
+#     with torch.no_grad():
+#         q_values = fp(game.get_network_input().to(torch.float32).to(device))
+#     move = torch.argmax(q_values).item()
+#     if move in game.get_legal_moves():
+#         return move
+#     return game.sample_legal_move()
 
 
 def select_move_with_policy(self, state):
@@ -231,6 +232,7 @@ class Card_Env:
         self.game = Card_Game(num_players, num_cards, trump)
         # foreign_policy : game -> deck_index
         self.foreign_policy = foreign_policy
+
     
     def reset(self):
         self.game.reset()
@@ -249,35 +251,29 @@ class Card_Env:
         current_tricks_won = torch.clone(self.game.tricks_won[current_player])
 
         # first play the current move
-        if not self.game.is_move_legal(deck_index):
-            #print('player plays an illegal move')
-            # return None, -10, True
-            return None, (self.game.turn_counter // 4) - 13, True
+        # if not self.game.is_move_legal(deck_index):
+        #     return None, ((self.game.turn_counter // 4) - 13) / 26.0, True
 
         
         self.game.play_card(deck_index)
-        # current_player = self.game.current_player
 
         # let the next three players play using the foreign_policy
         # for i in range(3):
         while True:
-            # print('player', self.game.current_player, 'is playing')
             if self.game.current_player == current_player:
-                #print("It is my turn again")
                 break
-            move = self.foreign_policy(self.game, fp)
-            if move == None:
-                # print('foreign policy did not find a legal move')
-                # print('got', move)
-                torch.set_printoptions(profile="full")
-                # print('the hand is', self.game.hands[self.game.current_player])
-                #print('the hand by suit is', torch.unflatten(self.game.hands[self.game.current_player], 0, (4, (self.game.num_players * self.game.num_cards / 4).int())))
-                #print('the current suit is', self.game.current_suit)
-                torch.set_printoptions(profile="default")
+
+            if self.foreign_policy != random_agent:
+                with torch.no_grad():
+                    q_values = self.foreign_policy(self.game.get_network_input().to(torch.float32).to(device))
+                move = torch.argmax(q_values).item()
+            else:
+                move = self.foreign_policy(self.game, fp)
+            
+            if len(self.game.get_legal_moves()) == 0:
                 return None, 0, True    # TODO: Not sure about this, what to do if the game is over
             if not self.game.is_move_legal(move):
-               #  print('foreign policy found an illegal move')
-                return None, 0, True
+                move = self.game.sample_legal_move()
             self.game.play_card(move)
 
         # reward is 1 if the player won this trick, 0 otherwise
