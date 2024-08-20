@@ -225,6 +225,78 @@ def select_move_with_policy(self, state):
 
     return move
 
+def unpack(input):
+    hand = input[0:52]
+
+    state_winner = torch.unflatten(input[52:52*56 + 52], 0, (52, 56))
+
+    state = state_winner[:, 0:52]
+    winner_tracker = state_winner[:, 52:]
+
+    return hand, state, winner_tracker
+
+'''
+returns: the number of last played turn at this point [-1, 51]
+returns -1 if no card has been played yet
+'''
+def get_last_turn(input):
+    _, state, _ = unpack(input)
+
+    turn_num = 0
+
+    while turn_num < 52 and (not torch.equal(state[turn_num, :], torch.zeros(52))):
+        turn_num += 1
+    
+    return turn_num - 1
+
+
+'''
+return the current suit of the state 0-3 corresponding to suits ['C', 'D', 'H', 'S']
+returns None if no leading suit
+'''
+def get_current_suit(input):
+    _, state, _ = unpack(input)
+    last_turn = get_last_turn(input)
+
+    if (last_turn + 1) % 4 == 0:
+        # Trick done, suit should be none
+        return None
+
+    assert 0 <= last_turn  and last_turn <= 51
+    card = state[last_turn - (last_turn % 4)]
+    by_suit = torch.unflatten(card, 0, (4, 13)).count_nonzero(1)
+    
+    return torch.argmax(by_suit)
+
+
+'''
+state: the current state
+(1x52)    +  (56x52)       +       (1x52): the current state
+^hand       ^who plays each card  ^cards not seen yet
+                    + cards played
+returns one-hot coded tensor of legal moves from the given state
+'''
+def get_legal_moves(input):
+    hand, state, winner_tracker = unpack(input)
+
+    current_suit = get_current_suit(input)
+    if current_suit == None:
+        card_idx = hand.nonzero().flatten()
+    else:
+        by_suit = torch.unflatten(hand, 0, (4, 13))
+        if by_suit[current_suit].sum() == 0:
+            # no card in suit
+            card_idx = hand.nonzero().flatten()
+        else:
+            new_moves = torch.zeros((4, 13))
+            new_moves[current_suit] = by_suit[current_suit]
+            card_idx = new_moves.flatten().nonzero().flatten()
+
+    moves = torch.zeros(52)
+    moves[card_idx] = 1
+    return moves
+
+
 # a card playing environment that maintains a game environment and is responsible for
 # using some agent to get to the next state from the current state, and computes the reward
 class Card_Env:
