@@ -323,8 +323,9 @@ class Card_Env:
         current_tricks_won = torch.clone(self.game.tricks_won[current_player])
 
         # first play the current move
-        # if not self.game.is_move_legal(deck_index):
-        #     return None, ((self.game.turn_counter // 4) - 13) / 26.0, True
+        if not self.game.is_move_legal(deck_index):
+            # should not happen
+            return None, 0, True
 
         
         self.game.play_card(deck_index)
