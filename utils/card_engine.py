@@ -177,6 +177,23 @@ class Card_Game:
         new_moves[self.current_suit] = by_suit[self.current_suit]
         #print('have cards in suit. will return', new_moves.flatten().nonzero().flatten())
         return new_moves.flatten().nonzero().flatten()
+    
+    '''
+    returns a torch tensor of shape(4) each entry is the card with highest value [-1, 12] in that suit
+    -1 denotes there is no card with that suit
+    '''
+    def get_highest_value_card(self):
+        result = torch.ones(4, dtype=torch.int) * (-1)
+        moves = self.hands[self.current_player]
+        by_suit = torch.unflatten(moves, 0, (4, self.num_players * self.num_cards // 4))
+
+        for i in range(4):
+            cards_in_suit = (by_suit[i] == 1).nonzero()
+            if len(cards_in_suit) != 0:
+                result[i] = cards_in_suit.max()
+
+        return result
+
 
     '''
     returns a random legal move from the current player
@@ -200,6 +217,42 @@ def random_agent(game, fp):
     # game.play_card(chosen_move)
     return chosen_move
 
+'''
+print the card [0-52] in human readable format: suit-card
+'''
+def move_to_card(move):
+    assert 0 <= move and move <= 52
+
+    suits = ['C', 'D', 'H', 'S']
+
+    return f'{suits[move // 13]} {move % 13}'
+
+
+
+'''
+One turn greedy policy:
+Choose the card with highest chance of wining this trick.
+If current suit is none or no card with current suit,
+- if there is a Spade, play a Spade with highest value
+- othrewise play the card with highest value among all suits.
+If there are cards with current suit, play the one with highest value.
+
+Returns None if no legal moves
+'''
+def greedy_policy(game):
+    if len(game.hands[game.current_player]) == 0:
+        return None
+
+    highest_values = game.get_highest_value_card()
+
+    if game.current_suit == None or highest_values[game.current_suit] == -1:
+        if highest_values[3] != -1:
+            suit = 3
+        else:
+            suit = highest_values.argmax()
+        return suit * game.num_cards + highest_values[suit]
+    
+    return game.current_suit * game.num_cards + highest_values[game.current_suit]
 
 # def policy_agent(game, fp):
 #     with torch.no_grad():
