@@ -208,7 +208,7 @@ class Card_Game:
 # a random agent that choose a random legal move and plays it
 # returns the chosen card to play : 0-51
 # the argument fp is not used, but is necessary to interchange random_agent and policy_agent in Card_Env
-def random_agent(game, fp):
+def random_agent(game):
     moves = game.get_legal_moves()
     if len(moves) == 0:
         return
@@ -349,6 +349,16 @@ def get_legal_moves(input):
     moves[card_idx] = 1
     return moves
 
+def policy_legal_move(net, input):
+    legal_mask = get_legal_moves(input).to(device)
+    with torch.no_grad():
+        x = (net(input.to(device))) * legal_mask
+        x[x == 0] = -float('inf')
+        return x.max(0).indices.view(1,1)
+
+def net_policy(net, game):
+    return policy_legal_move(net, game.get_network_input())
+    
 
 # a card playing environment that maintains a game environment and is responsible for
 # using some agent to get to the next state from the current state, and computes the reward
@@ -367,7 +377,7 @@ class Card_Env:
         return self.game.get_network_input()
 
     # return observation, reward, terminated
-    def step(self, deck_index, fp):
+    def step(self, deck_index):
         # step to the next state using the given foreign policy to play three turns in the game
         # TODO: if try to step through an illegal move, the game ends immediately
         #       may want to modify in the future
@@ -389,15 +399,20 @@ class Card_Env:
             if self.game.current_player == current_player:
                 break
 
-            if self.foreign_policy != random_agent:
-                with torch.no_grad():
-                    q_values = self.foreign_policy(self.game.get_network_input().to(torch.float32).to(device))
-                move = torch.argmax(q_values).item()
-            else:
-                move = self.foreign_policy(self.game, fp)
+            # if self.foreign_policy != random_agent:
+            #     legal_mask = get_legal_moves(input).to(device)
+            #     with torch.no_grad():
+            #         x = (fp(input.to(device))) * legal_mask
+            #         x[x == 0] = -float('inf')
+            #         move = x.max(0).indices.view(1,1)
+            # else:
+            #     move = self.foreign_policy(self.game, fp)
             
             if len(self.game.get_legal_moves()) == 0:
                 return None, 0, True    # TODO: Not sure about this, what to do if the game is over
+
+            move = self.foreign_policy(self.game)
+
             if not self.game.is_move_legal(move):
                 move = self.game.sample_legal_move()
             self.game.play_card(move)
