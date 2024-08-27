@@ -1,12 +1,5 @@
 import torch
 
-# if GPU is to be used
-device = torch.device(
-    "cuda" if torch.cuda.is_available() else
-    "mps" if torch.backends.mps.is_available() else
-    "cpu"
-)
-
 '''
 Attributes
 self.num_players: integer number of players
@@ -256,27 +249,12 @@ def greedy_policy(game):
 
 # def policy_agent(game, fp):
 #     with torch.no_grad():
-#         q_values = fp(game.get_network_input().to(torch.float32).to(device))
+#         q_values = fp(game.get_network_input().to(torch.float32).to(evice))
 #     move = torch.argmax(q_values).item()
 #     if move in game.get_legal_moves():
 #         return move
 #     return game.sample_legal_move()
 
-
-def select_move_with_policy(self, state):
-    if not isinstance(state, torch.Tensor):
-        state = torch.tensor(state, dtype=torch.float32)
-    state = state.to(self.device)
-
-    # print(f"State device: {state.device}")
-    # for name, param in self.policy_net.named_parameters():
-        # print(f"Model parameter '{name}' is on device: {param.device}")
-
-    with torch.no_grad():
-        q_values = self.policy_net(state)
-    move = torch.argmax(q_values).item()
-
-    return move
 
 def unpack(input):
     hand = input[0:52]
@@ -293,11 +271,16 @@ returns: the number of last played turn at this point [-1, 51]
 returns -1 if no card has been played yet
 '''
 def get_last_turn(input):
+    device = torch.device(
+        "cuda" if torch.cuda.is_available() else
+        "mps" if torch.backends.mps.is_available() else
+        "cpu"
+    )
     _, state, _ = unpack(input)
 
     turn_num = 0
 
-    while turn_num < 52 and (not torch.equal(state[turn_num, :], torch.zeros(52))):
+    while turn_num < 52 and (not torch.equal(state[turn_num, :].to(device), torch.zeros(52).to(device))):
         turn_num += 1
     
     return turn_num - 1
@@ -350,6 +333,11 @@ def get_legal_moves(input):
     return moves
 
 def policy_legal_move(net, input):
+    device = torch.device(
+        "cuda" if torch.cuda.is_available() else
+        "mps" if torch.backends.mps.is_available() else
+        "cpu"
+    )
     legal_mask = get_legal_moves(input).to(device)
     with torch.no_grad():
         x = (net(input.to(device))) * legal_mask
@@ -357,7 +345,12 @@ def policy_legal_move(net, input):
         return x.max(0).indices.view(1,1)
 
 def net_policy(net, game):
-    return policy_legal_move(net, game.get_network_input())
+    device = torch.device(
+        "cuda" if torch.cuda.is_available() else
+        "mps" if torch.backends.mps.is_available() else
+        "cpu"
+    )
+    return policy_legal_move(net, game.get_network_input().to(device))
     
 
 # a card playing environment that maintains a game environment and is responsible for
@@ -411,7 +404,7 @@ class Card_Env:
             if len(self.game.get_legal_moves()) == 0:
                 return None, 0, True    # TODO: Not sure about this, what to do if the game is over
 
-            move = self.foreign_policy(self.game)
+            move = self.foreign_policy(self.game).item()
 
             if not self.game.is_move_legal(move):
                 move = self.game.sample_legal_move()
