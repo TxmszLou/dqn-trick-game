@@ -5,11 +5,15 @@
 Shin Kim, Juergen Kritschgau, Sixuan Lou, Edward Varvak, Yizhen Zhao 
 
 ## Repository Structure 
- - `dqn_training with legal moves.ipynb`
- - `dqn_training with previous training.ipynb`
- - `experiments.ipynb`
- - `weights`
+ - `dqn_training with legal moves.ipynb` training notebook for a neural net that is forced to always play legal moves
+ - `dqn_training with previous training.ipynb` training notebook fora neural net that is trying to learn the rules of spades
+ - `experiments.ipynb` simulating games of spades with different policies 
+ - `weights` stores saved neural nets from training notebooks
+   - put best trick taker here
+   - put most law abbiding network here
  - `utils`
+   - `card_engine.py` code for spades game environment
+   - `greedy_agent.py` code to implement a greedy spades policy
  - `figures`
  - `depreciated notebooks` 
  - `notes` 
