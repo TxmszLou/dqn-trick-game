@@ -4,6 +4,16 @@
 ## Team Members 
 Shin Kim, Juergen Kritschgau, Sixuan Lou, Edward Varvak, Yizhen Zhao 
 
+## Repository Structure 
+ - `dqn_training with legal moves.ipynb`
+ - `dqn_training with previous training.ipynb`
+ - `experiments.ipynb`
+ - `weights`
+ - `utils`
+ - `figures`
+ - `depreciated notebooks` 
+ - `notes` 
+
 ## Overview
 In reinforcement learning problems, the agent learns how to maximize a numerical reward signal through direct interactions with the environment and without relying on a complete model of the environment. In fact, agents using model free methods learn from raw experience and without any inferences about how the environment will behave. An important model free method is the use of the Q-Learning algorithm to approximate the optimal action value function. However, it can be impractical to estimate the optimal action value function for every possible state-action pair. Deep Q-Learning uses a neural network trained with a variant of Q-Learning as a nonlinear function approximator of the optimal action value function. Our objective is to use Deep Q-Learning to train an agent to make legal moves and/or win tricks while playing the card game Spades (without bidding).
 
