@@ -44,3 +44,9 @@ In the case when the agent selected actions based on the network output alone, t
 
 So far, the agent played against other players that select a random legal move when it is their turn. It would be interesting to see how the agent learns when we allow for the other players to select actions based on a trained neural network.
 Given that the inputs to the neural network consist entirely of one hot encoded information, we opted to use linear layers. We also kept the network depth fixed to keep the training time relatively short. We can experiment with the network architecture to find one that optimizes agent performance.
+
+
+## References
+
+ - https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
+ - Andrew Barto and Richard Sutton. Reinforcement Learning : An Introduction. MIT Press.
