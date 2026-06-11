@@ -4,7 +4,7 @@ from .cards import move_to_card
 from .encoding import get_legal_moves
 
 
-def random_agent(game):
+def random_agent(game, *args):
     moves = game.get_legal_moves()
     if len(moves) == 0:
         return

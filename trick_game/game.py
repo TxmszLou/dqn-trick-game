@@ -19,6 +19,7 @@ class Card_Game:
         self.__init__(self.num_players, self.num_cards, self.trump)
 
     def play_card(self, deck_index):
+        deck_index = int(deck_index)
         assert self.hands[self.current_player][deck_index] != 0
         card = torch.nn.functional.one_hot(
             torch.tensor(deck_index, dtype=int),

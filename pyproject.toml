@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "dqn-trick-game"
 version = "0.1.0"
@@ -13,6 +17,16 @@ dependencies = [
     "torch>=2.2.0",
     "tqdm>=4.66.0",
 ]
+
+[project.scripts]
+trick-game-evaluate = "trick_game.evaluate:main"
+trick-game-train-dqn = "trick_game.train_dqn:main"
+
+[tool.uv]
+package = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["trick_game"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

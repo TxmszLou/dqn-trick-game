@@ -49,8 +49,6 @@ def optimize_model(memory, policy_net, target_net, optimizer, device, batch_size
         dtype=torch.bool,
     )
     non_final_next_states = [s for s in batch.next_state if s is not None]
-
-    non_final_next_states = torch.cat(non_final_next_states)
     state_batch = torch.cat(batch.state)
     action_batch = torch.cat(batch.action)
     reward_batch = torch.cat(batch.reward)
@@ -59,6 +57,7 @@ def optimize_model(memory, policy_net, target_net, optimizer, device, batch_size
 
     next_state_values = torch.zeros(len(transitions), device=device)
     if non_final_next_states != []:
+        non_final_next_states = torch.cat(non_final_next_states)
         with torch.no_grad():
             next_state_values[non_final_mask] = target_net(non_final_next_states).max(1).values
 
