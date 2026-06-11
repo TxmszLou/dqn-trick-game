@@ -1,0 +1,18 @@
+[project]
+name = "dqn-trick-game"
+version = "0.1.0"
+description = "Deep reinforcement learning experiments for a simplified Spades trick-taking environment."
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "ipykernel>=6.29.0",
+    "ipython>=8.0.0",
+    "jupyter>=1.1.0",
+    "matplotlib>=3.8.0",
+    "pytest>=8.0.0",
+    "torch>=2.2.0",
+    "tqdm>=4.66.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
