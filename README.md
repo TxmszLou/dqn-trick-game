@@ -38,9 +38,15 @@ The replay memory is a list of 13 double ended queues (or deques) each of length
 One of the more sensitive hyperparameters was the discount rate (gamma). The gamma value was especially sensitive when the agent selected actions without regard to whether or not the action is legal. For gamma values close to 1, the values of the estimated action value functions tend to blow up in magnitude resulting in poor agent performance. For gamma values close to 0, the agent was able to learn the rules of the game very well resulting in an average duration of around 11 turns for 100 simulated games. To reach the balance between learning to play legal moves and looking further into the future to maximize the value function, we decided a discount rate around 0.3 to be optimal.    
 
 ## Results
-In the case when the agent selected actions based on the network output alone, the agent was able to play for 9 turns and take 3 tricks on average in 100 simulated games. When the agent only selected legal actions, the agent was able to take 3.7 tricks on average in 1000 simulated games. To evaluate this performance, we implemented a one turn greedy algorithm where the agent chooses the card with the highest chance of winning the trick at each turn. This baseline model was able to take 3.8 tricks on average in 1000 simulated games.
+In the case when the agent selected actions based on the network output alone, the agent was able to play for 8.5 turns on average in 100 simulated games. When the agent only selected legal actions, the agent was able to take 3.7 tricks on average in 1000 simulated games. To evaluate this performance, we implemented a one turn greedy algorithm where the agent chooses the card with the highest chance of winning the trick at each turn. This baseline model was able to take 3.8 tricks on average in 1000 simulated games.
 
 ## Future Directions 
 
 So far, the agent played against other players that select a random legal move when it is their turn. It would be interesting to see how the agent learns when we allow for the other players to select actions based on a trained neural network.
 Given that the inputs to the neural network consist entirely of one hot encoded information, we opted to use linear layers. We also kept the network depth fixed to keep the training time relatively short. We can experiment with the network architecture to find one that optimizes agent performance.
+
+
+## References
+
+ - https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
+ - Andrew Barto and Richard Sutton. Reinforcement Learning : An Introduction. MIT Press.
